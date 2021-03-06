@@ -1,5 +1,6 @@
 import json
 from collections import defaultdict
+from itertools import chain
 
 import pandas as pd
 
@@ -14,18 +15,22 @@ class DisjointSet:
         return self.parent[x]
 
     def merge(self, a, b):
-        self.parent[self.get_parent(a)] = self.get_parent(b)
+        x, y = map(self.get_parent, [a, b])
+        if x < y:
+            x, y = y, x
+
+        self.parent[x] = y
 
     def finalize(self):
-        ret = {}
+        groups = {}
         for i in range(len(self.parent)):
             if i == self.get_parent(i):
-                ret[i] = set()
+                groups[i] = set()
 
         for i in range(len(self.parent)):
-            ret[self.get_parent(i)].add(i)
+            groups[self.get_parent(i)].add(i)
 
-        return ret.values()
+        return groups.values()
 
 
 def main():
@@ -47,20 +52,8 @@ def main():
         phones[d["Phone"]].add(i)
         order_ids[d["OrderId"]].add(i)
 
-    for email, whoms in emails.items():
-        if email != "":
-            whoms = list(whoms)
-            for a, b in zip(whoms[:-1], whoms[1:]):
-                dsu.merge(a, b)
-
-    for phone, whoms in phones.items():
-        if phone != "":
-            whoms = list(whoms)
-            for a, b in zip(whoms[:-1], whoms[1:]):
-                dsu.merge(a, b)
-
-    for order_id, whoms in order_ids.items():
-        if order_id != "":
+    for key, whoms in chain.from_iterable(map(lambda d: d.items(), [emails, phones, order_ids])):
+        if key != "":
             whoms = list(whoms)
             for a, b in zip(whoms[:-1], whoms[1:]):
                 dsu.merge(a, b)
@@ -71,7 +64,7 @@ def main():
 
     groups = {}
     contacts = {}
-    belongs_to = defaultdict(int)
+    belongs_to = {}
 
     for group in ret:
         group = sorted(group)
@@ -83,7 +76,7 @@ def main():
             contacts[group[0]] += data[member]["Contacts"]
 
     outputs = [
-        "-".join(map(str, groups[belongs_to[i]])) + f",{contacts[belongs_to[i]]}"
+        "-".join(map(str, groups[belongs_to[i]])) + f", {contacts[belongs_to[i]]}"
         for i in range(len(data))
     ]
 
