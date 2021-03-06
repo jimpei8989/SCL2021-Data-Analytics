@@ -30,10 +30,11 @@ class DisjointSet:
         for i in range(len(self.parent)):
             groups[self.get_parent(i)].add(i)
 
-        return groups.values()
+        return groups
 
 
 def main():
+    key_properties = ["Email", "Phone", "OrderId"]
     with open("datasets/contacts.json") as f:
         data = json.load(f)
 
@@ -43,40 +44,35 @@ def main():
 
     assert all(d.keys() == data[0].keys() for d in data)
 
-    emails = defaultdict(set)
-    phones = defaultdict(set)
-    order_ids = defaultdict(set)
+    property_keys = {p: defaultdict(set) for p in key_properties}
 
     for i, d in enumerate(data):
-        emails[d["Email"]].add(i)
-        phones[d["Phone"]].add(i)
-        order_ids[d["OrderId"]].add(i)
+        for p in key_properties:
+            property_keys[p][d[p]].add(i)
 
-    for key, whoms in chain.from_iterable(map(lambda d: d.items(), [emails, phones, order_ids])):
+    for key, whoms in chain.from_iterable(map(lambda p: property_keys[p].items(), key_properties)):
         if key != "":
             whoms = list(whoms)
             for a, b in zip(whoms[:-1], whoms[1:]):
                 dsu.merge(a, b)
 
-    ret = dsu.finalize()
+    groups = dsu.finalize()  # leader [int] -> set of members [int]
 
-    print(f"# disjoint groups: {len(ret)}")
+    print(f"# disjoint groups: {len(groups)}")
 
-    groups = {}
-    contacts = {}
-    belongs_to = {}
+    belongs_to = {}  # member [int] -> leader [int]
+    num_contacts = {}  # leader [int] -> int
 
-    for group in ret:
-        group = sorted(group)
-        groups[group[0]] = group
-        contacts[group[0]] = 0
+    for leader, members in groups.items():
+        members = sorted(members)
+        num_contacts[leader] = 0
 
-        for member in group:
-            belongs_to[member] = group[0]
-            contacts[group[0]] += data[member]["Contacts"]
+        for member in members:
+            belongs_to[member] = leader
+            num_contacts[leader] += data[member]["Contacts"]
 
     outputs = [
-        "-".join(map(str, groups[belongs_to[i]])) + f", {contacts[belongs_to[i]]}"
+        "-".join(map(str, sorted(groups[belongs_to[i]]))) + f", {num_contacts[belongs_to[i]]}"
         for i in range(len(data))
     ]
 
