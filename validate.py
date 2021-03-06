@@ -6,7 +6,7 @@ import pandas as pd
 def main():
     properties = ["Email", "Phone", "OrderId"]
 
-    with open("datasets/contacts.json") as f:
+    with open("data/contacts.json") as f:
         data = json.load(f)
 
     df = pd.read_csv("output.csv")
