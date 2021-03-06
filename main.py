@@ -16,19 +16,13 @@ class DisjointSet:
         return self.parent[x]
 
     def merge(self, a, b):
-        x, y = map(self.get_parent, [a, b])
-        if x < y:
-            x, y = y, x
-
+        x, y = sorted(map(self.get_parent, [a, b]))
         self.parent[x] = y
 
     def finalize(self):
-        groups = {}
+        groups = defaultdict(set)
         for i in range(len(self.parent)):
-            if i == self.get_parent(i):
-                groups[i] = set()
             groups[self.get_parent(i)].add(i)
-
         return groups
 
 
@@ -38,7 +32,7 @@ def main(args):
     with open(args.data_json) as f:
         data = json.load(f)
 
-    print(f"> #data: {len(data)}")
+    print(f"+ #data: {len(data)}")
 
     dsu = DisjointSet(len(data))
 
@@ -50,6 +44,9 @@ def main(args):
         for p in key_properties:
             property_keys[p][d[p]].add(i)
 
+    for p in key_properties:
+        print(f"- {p}: {len(property_keys[p])}")
+
     for key, whoms in chain.from_iterable(map(lambda p: property_keys[p].items(), key_properties)):
         if key != "":
             whoms = list(whoms)
@@ -58,18 +55,15 @@ def main(args):
 
     groups = dsu.finalize()  # leader [int] -> set of members [int]
 
-    print(f"> #disjoint groups: {len(groups)}")
+    print(f"+ #disjoint groups: {len(groups)}")
 
     belongs_to = {}  # member [int] -> leader [int]
     num_contacts = {}  # leader [int] -> int
 
     for leader, members in groups.items():
-        members = sorted(members)
-        num_contacts[leader] = 0
-
         for member in members:
             belongs_to[member] = leader
-            num_contacts[leader] += data[member]["Contacts"]
+        num_contacts[leader] = sum(data[member]["Contacts"] for member in members)
 
     outputs = [
         "-".join(map(str, sorted(groups[belongs_to[i]]))) + f", {num_contacts[belongs_to[i]]}"
