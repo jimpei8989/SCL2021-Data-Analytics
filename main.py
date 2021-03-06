@@ -1,4 +1,5 @@
 import json
+from argparse import ArgumentParser
 from collections import defaultdict
 from itertools import chain
 
@@ -26,16 +27,15 @@ class DisjointSet:
         for i in range(len(self.parent)):
             if i == self.get_parent(i):
                 groups[i] = set()
-
-        for i in range(len(self.parent)):
             groups[self.get_parent(i)].add(i)
 
         return groups
 
 
-def main():
+def main(args):
     key_properties = ["Email", "Phone", "OrderId"]
-    with open("datasets/contacts.json") as f:
+
+    with open(args.data_json) as f:
         data = json.load(f)
 
     print(f"> #data: {len(data)}")
@@ -58,7 +58,7 @@ def main():
 
     groups = dsu.finalize()  # leader [int] -> set of members [int]
 
-    print(f"# disjoint groups: {len(groups)}")
+    print(f"> #disjoint groups: {len(groups)}")
 
     belongs_to = {}  # member [int] -> leader [int]
     num_contacts = {}  # leader [int] -> int
@@ -80,7 +80,15 @@ def main():
         [[i, o] for i, o in enumerate(outputs)],
         columns=["ticket_id", "ticket_trace/contact"],
     )
-    df.to_csv("output.csv", index=False)
+    df.to_csv(args.output_csv, index=False)
 
 
-main()
+def parse_arguments():
+    parser = ArgumentParser()
+    parser.add_argument("--data_json", default="data/contacts.json")
+    parser.add_argument("--output_csv", default="output.csv")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main(parse_arguments())
